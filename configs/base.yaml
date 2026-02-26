@@ -1,25 +1,62 @@
 seed: 0
+
 sim:
   dt: 0.05
-  steps: 500
+  steps: 3000
+
 env:
   domain: torus
   size: [10.0, 10.0]
+
 agents:
-  N: 30
-  vmax: 1.0
-  noise_sigma: 0.15
-logging:
-  out_dir: outputs/run
-  every: 1
+  N: 50
+  vmax: 1.2
+  noise_sigma: 0.10
+
 neighbors:
-  Rp: 1.5
+  Rp: 1.6
+
 assembly:
   Rc: 0.7
   max_degree: 4
-  Tmin: 40          # steps
+  Tmin: 40
   detach_base_p: 0.001
+
 osc:
-  omega0: 0.15              # speed of phase advance per step (baseline)
-  phase_noise_sigma: 0.00    # when a neighbor fires, add this to your phase (optional)
-  sync_mode: anchor         # anchor | mean
+  omega0: 0.15
+  phase_noise_sigma: 0.00
+  sync_mode: anchor
+
+# CFI-like intention dynamics (on 3D feature vector)
+cognition:
+  tau_c: 1.0
+  g: 0.6
+  alpha: 0.9
+  beta_I: 0.8
+  beta_C: -0.5
+  beta_N: 0.0
+
+objective:
+  init_weights: [0.70, 0.20, 0.10]   # (wI, wC, wN)
+  update_rate: 0.15                  # when b> b_max or c> c_max
+  relax_rate: 0.01                   # drift back to init when ok
+
+constraints:
+  features_ema: 0.12
+  lambda: 0.10
+  eta: 0.02
+  b_max: 1.0
+  c_max: 6.0
+  event_ema: 0.20
+  gamma: [0.40, 0.55, 0.25, 0.60]     # neigh, degree, event_rate, novelty
+
+policy:
+  k_align: 0.7
+  k_cohesion: 0.7
+  k_sep: 1.2
+  R_sep: 0.35
+  damp: 0.05
+
+logging:
+  out_dir: outputs/run
+  every: 1
