@@ -12,3 +12,14 @@ agents:
 logging:
   out_dir: outputs/run
   every: 1
+neighbors:
+  Rp: 1.5
+assembly:
+  Rc: 0.7
+  max_degree: 4
+  Tmin: 40          # steps
+  detach_base_p: 0.001
+osc:
+  omega0: 0.20          # speed of phase advance per step (baseline)
+  pulse_kick: 0.15      # when a neighbor fires, add this to your phase (optional)
+  sync_mode: anchor     # anchor | mean
