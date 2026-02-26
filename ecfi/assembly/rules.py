@@ -31,13 +31,14 @@ def apply_join_detach(
     detach_base_p: float,
     boreness: np.ndarray | None,
     rng: np.random.Generator,
-) -> None:
+) -> tuple[list[Edge], list[Edge]]:
     """
     Mutates edges/degrees in-place.
-    - Join if within Rc and both have free degree.
-    - Detach after Tmin with probability p = detach_base_p * (1 + b_k + b_l) if boreness provided.
+    Returns (joined_edges, detached_edges) for instrumentation / phase sync.
     """
     N = positions.shape[0]
+    joined: List[Edge] = []
+    detached: List[Edge] = []
 
     # JOINS (brute force; ok for MVP N~50)
     for i in range(N):
@@ -50,9 +51,11 @@ def apply_join_detach(
             if k in edges:
                 continue
             if torus_dist(positions[i], positions[j], size) < Rc:
-                edges[k] = Edge(i=i, j=j, t_join=t)
+                e = Edge(i=i, j=j, t_join=t)
+                edges[k] = e
                 degrees[i] += 1
                 degrees[j] += 1
+                joined.append(e)
 
     # DETACH
     to_remove: List[Tuple[int, int]] = []
@@ -72,3 +75,6 @@ def apply_join_detach(
         e = edges.pop(k)
         degrees[e.i] -= 1
         degrees[e.j] -= 1
+        detached.append(e)
+
+    return joined, detached
