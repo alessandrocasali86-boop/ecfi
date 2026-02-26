@@ -54,9 +54,15 @@ class World:
         self.detach_base_p = float(cfg["assembly"]["detach_base_p"])
 
         # oscillators
-        self.omega0 = float(cfg["osc"]["omega0"])
+        self.omega0 = float(cfg["osc"]["omega0"])  # mean frequency
+        self.omega0_sigma = float(cfg["osc"].get("omega0_sigma", 0.0))  # H'': heterogeneity
         self.phase_noise_sigma = float(cfg["osc"].get("phase_noise_sigma", 0.0))
         self.sync_mode = str(cfg["osc"].get("sync_mode", "anchor"))
+
+        # H'': per-agent oscillator frequencies omega0_k ~ N(omega0, omega0_sigma^2)
+        self.omega0_k = self.rng.normal(loc=self.omega0, scale=self.omega0_sigma, size=self.N)
+        # defensive: avoid negative frequencies (rare, but possible if sigma is large)
+        self.omega0_k = np.clip(self.omega0_k, 0.0, None)
 
         # cognition params
         self.tau_c = float(cfg["cognition"]["tau_c"])
@@ -142,13 +148,15 @@ class World:
         # --- 1) oscillator update + firing events
         fired = np.zeros(self.N, dtype=float)
         for a in self.agents:
+            k = a.idx
             noise = self.rng.normal(0.0, self.phase_noise_sigma) * np.sqrt(self.dt)
-            a.phase += self.omega0 * self.dt + noise
-            if a.phase >= 1.0:
-                a.phase -= 1.0
-                fired[a.idx] = 1.0
-            elif a.phase < 0.0:
-                a.phase += 1.0
+
+            new_phase = a.phase + float(self.omega0_k[k]) * self.dt + noise
+            if new_phase >= 1.0:
+                fired[k] = 1.0
+
+            # wrap phase to [0,1)
+            a.phase = float(new_phase % 1.0)
 
         # --- 2) pre-join components (to detect merges)
         uf_old = UnionFind(self.N)
@@ -337,7 +345,7 @@ class World:
         self._global_writer = csv.writer(self._global_f)
 
         self._agents_writer.writerow([
-            "t", "id", "x", "y", "vx", "vy", "phase",
+            "t", "id", "x", "y", "vx", "vy", "phase", "omega0",
             "degree", "cluster_id", "cluster_size", "local_coh",
             "novelty", "boreness", "load",
             "wI", "wC", "wN", "omega_norm",
@@ -355,7 +363,7 @@ class World:
             speeds.append(float(np.linalg.norm(a.vel)))
             k = a.idx
             self._agents_writer.writerow([
-                self.t, k, a.pos[0], a.pos[1], a.vel[0], a.vel[1], float(a.phase),
+                self.t, k, a.pos[0], a.pos[1], a.vel[0], a.vel[1], float(a.phase), float(self.omega0_k[k]),
                 int(self.degrees[k]), int(self.cluster_id[k]),
                 float(self.cluster_sizes[k]), float(self.local_coh[k]),
                 float(self.novelty[k]), float(self.boreness[k]), float(self.load[k]),
