@@ -1,0 +1,14 @@
+seed: 0
+sim:
+  dt: 0.05
+  steps: 500
+env:
+  domain: torus
+  size: [10.0, 10.0]
+agents:
+  N: 30
+  vmax: 1.0
+  noise_sigma: 0.15
+logging:
+  out_dir: outputs/run
+  every: 1
