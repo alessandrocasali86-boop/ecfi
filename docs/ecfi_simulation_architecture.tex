@@ -1,0 +1,297 @@
+% ecfi_simulation_architecture.tex
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{graphicx}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+% Distinguish neighbor set from novelty (avoid N vs \mathcal{N} collision)
+\newcommand{\Neigh}{\mathcal{N}} % neighbor index set
+\newcommand{\nov}{\nu}          % novelty score
+
+% Notation (keep \varphi preferred over \phi)
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\varph}{\varphi}
+
+\title{E-CFI Demo Simulation: Architecture and Implementation Procedure}
+\author{Internal engineering note (repo documentation)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document fixes a minimal, reproducible architecture for an E-CFI simulation demo.
+The goal is to instantiate the two-time-scale CFI cognitive template (fast intention, slow objective),
+ground it in embodied interaction events (join/detach and phase synchronization),
+and expose an instrumentation layer suitable for monitoring and ablation studies.
+The design follows the CFI dynamical model of Canonne--Garnier and the embodied-oscillator self-assembly paradigm of Lucas et al.
+\cite{canonne_garnier_mcm2011,lucas_acsos2024_embodied}.
+\end{abstract}
+
+\section{Scope and success criteria}
+\subsection{What the demo must demonstrate}
+The demo is considered successful if it supports all three properties below:
+
+\begin{enumerate}[label=(S\arabic*),leftmargin=2.2em]
+\item \textbf{Collective sequences:} the system exhibits temporally stable coordination regimes (long plateaus in coordination statistics),
+interleaved with reconfiguration phases (sharp changes) without task-level rewards.
+\item \textbf{Embodied substrate:} regime changes are coupled to physical/relational events
+(contact-driven joining, detachment cascades, and phase synchronization within formed structures).
+\item \textbf{Measurable signatures:} regimes and change points are detectable from logged time series
+(e.g., connected components, phase coherence, novelty/boreness, cognitive-load proxy),
+and optionally from offline topological descriptors on sliding windows.
+\end{enumerate}
+
+\subsection{Minimal reproducibility contract}
+A run is fully specified by a configuration file and a random seed.
+For each run, the pipeline outputs:
+(i) raw logs (per-agent and global),
+(ii) derived signals (features, novelty/boreness/load),
+(iii) a deterministic replay artifact (e.g., video or frame dump).
+
+\section{Conceptual mapping}
+\subsection{CFI constructs as swarm primitives}
+Table~\ref{tab:mapping} fixes the operational interpretation used throughout the implementation.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{CFI construct} & \textbf{Swarm interpretation (E-CFI demo)} \\
+\midrule
+Intention $\omega_k$ (fast) & short-horizon coordination bias / mode preference \\
+Objective $\Omega_k$ (slow) & coupling weights, attention, coalition tendency \\
+Interaction terms $\beta_{k\ell}$ & imitation / contrast / independence w.r.t. neighbors \\
+Cognitive load $c_k$ & compute/comm budget proxy; interaction complexity \\
+Boreness threshold $b_{\max}$ & intrinsic trigger for exploration / reconfiguration \\
+Collective sequence & temporally stable coordination regime \\
+\bottomrule
+\end{tabular}
+\caption{Mapping used in the demo to make CFI variables directly testable in simulation.}
+\label{tab:mapping}
+\end{table}
+
+\section{State, graphs, and signals}
+We simulate $N$ agents indexed by $k\in\{1,\dots,N\}$ in a 2D continuous environment (torus or bounded disk).
+Time is discretized with step $\Delta t$.
+
+\subsection{Per-agent state}
+At time $t$ (discrete), each agent stores:
+\begin{itemize}[leftmargin=2.2em]
+\item Pose and motion: $p_k(t)\in\R^2$, $v_k(t)\in\R^2$.
+\item Oscillator phase: $\varph_k(t)\in[0,1)$ (pulse-coupled / event-driven oscillator).
+\item Cognitive state: intention $\omega_k(t)\in\R^d$ (fast), objective $\Omega_k(t)$ (slow).
+\item Endogenous constraints: boreness $b_k(t)\ge 0$, cognitive-load proxy $c_k(t)\ge 0$.
+\item Assembly metadata: slot capacity, degree, cluster id, join timer.
+\end{itemize}
+
+\subsection{Neighborhood and interaction structures}
+Two graphs are maintained at each $t$:
+\begin{itemize}[leftmargin=2.2em]
+\item \textbf{Proximity graph} $G_P(t)$: edges for pairs within sensing radius $R_P$.
+\item \textbf{Assembly graph} $G_A(t)$: edges for pairs currently joined (slot-based contact).
+\end{itemize}
+Clusters are defined as connected components of $G_A(t)$.
+
+For each agent $k$, let $\Neigh_k(t)\subseteq\{1,\dots,N\}$ denote the index set of neighbors (e.g., in the proximity graph).
+
+\subsection{Local feature vector}
+Each agent computes a local feature vector $x_k(t)\in\R^m$ from its neighborhood and current assembly structure.
+For the MVP we fix $m=3$:
+\[
+x_k(t)=\bigl(\text{deg}_k(t),\ \text{cluster\_size}_k(t),\ \text{local\_coherence}_k(t)\bigr),
+\]
+where $\text{deg}_k$ is the degree in $G_A(t)$ and local coherence is a neighborhood-limited phase-order statistic.
+
+\section{Dynamics}
+\subsection{Fast layer: intention update (CFI template)}
+We implement the CFI-style intention dynamics with nonlinear saturation \cite{canonne_garnier_mcm2011}.
+A representative continuous-time form is:
+\begin{align}
+\tau_c \frac{d\omega_k}{dt}
+  &= \alpha_k x_k(t) + \sum_{\ell\ne k} \beta_{k\ell}(t)\,x_\ell(t)\ -\ g\,\norm{\omega_k}^2\,\omega_k,
+\label{eq:intention}
+\end{align}
+with $g>0$ enforcing self-limitation. In code this is discretized with a stable integrator (e.g., Euler or RK2)
+and evaluated using neighbor-local sums (only $\ell\in \Neigh_k(t)$).
+
+\subsection{Slow layer: objective update and interaction-style selection}
+The objective $\Omega_k(t)$ evolves on a slower time scale and modulates interaction style via $\beta_{k\ell}(t)$.
+For the MVP we parameterize the objective as mixture weights:
+\[
+\Omega_k(t) = (w^I_k(t), w^C_k(t), w^N_k(t)),\qquad w^I_k+w^C_k+w^N_k=1,
+\]
+corresponding to imitation (I), contrast (C), and independence (N).
+
+Given $\Omega_k(t)$, we define effective couplings on neighbors $\ell\in \Neigh_k(t)$:
+\[
+\beta_{k\ell}(t) = w^I_k(t)\,\beta^I_{k\ell} + w^C_k(t)\,\beta^C_{k\ell} + w^N_k(t)\,\beta^N_{k\ell},
+\]
+where the base terms can be as simple as:
+(i) imitation: align with neighbor summary,
+(ii) contrast: anti-align,
+(iii) independence: weaken coupling and increase stochastic exploration.
+
+\subsection{Embodiment: join/detach and phase synchronization}
+We adopt the embodied-oscillator paradigm: agents have joinable slots and synchronize phases on contact
+\cite{lucas_acsos2024_embodied}.
+
+\paragraph{Join rule.}
+If $\norm{p_k(t)-p_\ell(t)}<R_C$ and both agents have free slots, create an assembly edge $(k,\ell)$ in $G_A(t)$
+(and store a join timestamp).
+
+\paragraph{Phase sync on merge.}
+When a join connects two previously distinct components in $G_A(t)$, we synchronize phases in the merged component.
+For the MVP: choose an anchor node (e.g., the node $\ell$ involved in the join, or a leader in the larger component)
+and set $\varph_j(t)\leftarrow\varph_{\text{anchor}}(t)$ for all $j$ in the merged component.
+
+\paragraph{Detach rule.}
+Edges in $G_A(t)$ are eligible for detachment after a minimum time $T_{\min}$.
+After that, detachment probability increases with boreness (and optionally with load), enabling cascade-like dissolutions.
+
+\subsection{Action policy and motion update}
+A minimal policy maps $(x_k,\omega_k,\Omega_k,\varph_k)$ to an action $u_k(t)$.
+For an MVP in 2D, we define:
+\begin{itemize}[leftmargin=2.2em]
+\item a baseline exploratory term (bounded random walk with inertia),
+\item an interaction term toward/away from neighbor velocity headings (weighted by $w^I_k,w^C_k$),
+\item a coalition term controlling the propensity to approach contacts when $w^I_k$ is high (or to avoid them when $w^N_k$ is high).
+\end{itemize}
+Then integrate:
+\[
+v_k(t+\Delta t)=\mathrm{clip}\bigl(v_k(t)+u_k(t)\Delta t,\ v_{\max}\bigr),\qquad
+p_k(t+\Delta t)=p_k(t)+v_k(t+\Delta t)\Delta t,
+\]
+with environment-specific boundary handling (wrap-around torus or reflective disk).
+
+\section{Endogenous constraints}
+\subsection{Novelty and boreness (intrinsic trigger)}
+Define a short-horizon feature summary $F_k(t)$ (e.g., an EMA of $x_k(t)$) and a novelty score:
+\[
+\nov_k(t) = d\bigl(F_k(t),F_k(t-\Delta)\bigr),
+\]
+where $d(\cdot,\cdot)$ is Euclidean or cosine distance.
+Boreness is updated by a leaky integrator:
+\[
+b_k(t)=(1-\lambda)\,b_k(t-\Delta)+\lambda\,\max\bigl(0,\eta - \nov_k(t)\bigr).
+\]
+When $b_k(t)>b_{\max}$, the agent updates $\Omega_k$ (e.g., shifts weight from imitation to independence),
+and optionally perturbs $\omega_k$ to break lock-in.
+
+\subsection{Cognitive-load proxy (resource pressure)}
+We implement a lightweight proxy:
+\[
+c_k(t) = \gamma_1\,|\Neigh_k(t)| + \gamma_2\,\text{deg}_k(t) + \gamma_3\,\text{event\_rate}_k(t) + \gamma_4\,\nov_k(t),
+\]
+where $|\Neigh_k(t)|$ is the neighborhood size, and event rate counts recent join/detach/pulse events.
+If $c_k(t)>c_{\max}$, the agent rescales couplings (reduce interaction strength) and/or increases independence.
+
+\section{Simulation loop (deterministic procedure)}
+Each iteration (time step) executes the following stages in order:
+
+\begin{enumerate}[leftmargin=2.2em]
+\item \textbf{Perception/State:} build $G_P(t)$ from positions; update $G_A(t)$ candidates (contact checks);
+compute neighborhoods $\Neigh_k(t)$ and local features $x_k(t)$.
+\item \textbf{Embodiment events:} apply join rules; synchronize phases on merges; apply detach rules.
+\item \textbf{Cognitive layer (fast):} update $\omega_k(t)$ using Eq.~\eqref{eq:intention}.
+\item \textbf{Endogenous constraints:} update $F_k(t)$, novelty $\nov_k(t)$, boreness $b_k(t)$, load $c_k(t)$.
+\item \textbf{Cognitive layer (slow):} if thresholds are crossed, update $\Omega_k(t)$ and derived $\beta_{k\ell}(t)$.
+\item \textbf{Action/motion:} compute $u_k(t)$ and integrate $(v_k,p_k)$.
+\item \textbf{Logging:} write per-agent state and global summaries; optionally dump frame for visualization.
+\end{enumerate}
+
+\section{Instrumentation and outputs}
+\subsection{Core logged quantities}
+The following are mandatory for each $t$:
+\begin{itemize}[leftmargin=2.2em]
+\item global: number of assembly components in $G_A(t)$, mean/variance of component size, edge count,
+global phase order parameter, counts of join/detach events.
+\item per-agent: $p_k,v_k,\varph_k$, cluster id, degree, $x_k$, $\omega_k$, $\Omega_k$, $b_k$, $c_k$.
+\end{itemize}
+
+\subsection{Derived regime indicators (online)}
+We compute a small set of online indicators used for plots and change-point heuristics:
+\begin{itemize}[leftmargin=2.2em]
+\item $n_{\text{clusters}}(t)$ and $\overline{s}_{\text{cluster}}(t)$,
+\item global phase coherence $r(t)$ from $\{\varph_k(t)\}$,
+\item novelty/boreness/load aggregates (mean, quantiles),
+\item edge turnover rate in $G_A(t)$.
+\end{itemize}
+
+\subsection{Optional offline TDA (sliding windows)}
+For a window of length $W$, build either:
+(i) a point cloud from trajectories (positions and/or phases), or
+(ii) a flag/clique complex from snapshots of $G_A(t)$.
+Compute persistence features per window and track distances between consecutive windows as regime-change signals.
+
+\section{Ablations (minimum set)}
+To make the demo scientifically interpretable, we fix four toggles:
+
+\begin{enumerate}[label=(A\arabic*),leftmargin=2.2em]
+\item \textbf{No boreness:} set $b_{\max}\to\infty$ (expect lock-in and fewer reconfigurations).
+\item \textbf{No load:} set $c_{\max}\to\infty$ (expect overly dense interactions, reduced robustness).
+\item \textbf{No embodiment coupling:} disable join/sync (expect weaker regime persistence and fewer stable assemblies).
+\item \textbf{No monitoring features:} log only raw trajectories (baseline for demonstrating the value of instrumentation/TDA).
+\end{enumerate}
+
+\section{Repository-level modularization}
+This document assumes a modular layout aligned with the control stack:
+\begin{itemize}[leftmargin=2.2em]
+\item \texttt{sim/}: world stepping, agent state, motion integration, neighbor search.
+\item \texttt{assembly/}: join/detach rules, component tracking, slot constraints, phase synchronization.
+\item \texttt{cognition/}: intention dynamics, objective updates, coupling construction.
+\item \texttt{signals/}: feature extraction, novelty/boreness/load, online indicators.
+\item \texttt{monitoring/}: (optional) offline persistence pipelines and windowing.
+\item \texttt{viz/}: animation and diagnostic plots.
+\end{itemize}
+
+\section{Configuration schema (suggested keys)}
+A minimal YAML/JSON config should include:
+\begin{itemize}[leftmargin=2.2em]
+\item environment: \texttt{domain}, \texttt{bounds}, \texttt{wrap}, \texttt{dt}, \texttt{steps}
+\item population: \texttt{N}, \texttt{vmax}, \texttt{Rp}, \texttt{Rc}, \texttt{max\_degree}
+\item oscillators: \texttt{phase\_init}, \texttt{pulse\_rate}, \texttt{sync\_mode}
+\item cognition: $\tau_c$, $g$, $\alpha$ range, $\beta$ ranges, objective update schedule
+\item constraints: $\lambda$, $\eta$, $b_{\max}$, $c_{\max}$, $\gamma_i$
+\item ablations: boolean flags for (A1)--(A4)
+\item logging: paths, frequencies, frame dump options
+\end{itemize}
+
+\begin{thebibliography}{10}
+
+\bibitem{canonne_garnier_mcm2011}
+Cl{\'e}ment Canonne and Nicolas Garnier.
+\newblock A Model for Collective Free Improvisation.
+\newblock In \emph{Mathematics and Computation in Music (MCM), Third International Conference},
+  \emph{Lecture Notes in Computer Science}, vol.~6726, pp.~29--41. Springer, 2011.
+\newblock DOI: \href{https://doi.org/10.1007/978-3-642-21590-2_3}{10.1007/978-3-642-21590-2\_3}.
+
+\bibitem{lucas_acsos2024_embodied}
+Pedro Lucas, Alexander Szorkovszky, Stefano Fasciani, and Kyrre Glette.
+\newblock Self-Assembly and Synchronization: Crafting Music with Multi-Agent Embodied Oscillators.
+\newblock In \emph{Proceedings of the IEEE International Conference on Autonomic Computing and Self-Organizing Systems (ACSOS)},
+  pp.~145--150. IEEE, 2024.
+\newblock DOI: \href{https://doi.org/10.1109/ACSOS61780.2024.00034}{10.1109/ACSOS61780.2024.00034}.
+
+\bibitem{casali_ecfi_vision_2026}
+Alessandro Casali.
+\newblock Embodied Collective Free Improvisation: A Vision for Aesthetic-Driven Coordination in Autonomic Swarms.
+\newblock Vision paper draft (ACSOS 2026 submission), 2026.
+
+\end{thebibliography}
+
+\end{document}
