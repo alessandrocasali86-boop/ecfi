@@ -24,8 +24,10 @@ assembly:
 
 osc:
   omega0: 0.15
+  omega0_sigma: 0.01
   phase_noise_sigma: 0.00
   sync_mode: anchor
+  sync_strength: 0.35
 
 # CFI-like intention dynamics (on 3D feature vector)
 cognition:

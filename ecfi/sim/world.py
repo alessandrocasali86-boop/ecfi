@@ -59,9 +59,12 @@ class World:
         self.phase_noise_sigma = float(cfg["osc"].get("phase_noise_sigma", 0.0))
         self.sync_mode = str(cfg["osc"].get("sync_mode", "anchor"))
 
+        # H2: soft sync strength in [0,1]; 1.0 = hard sync
+        self.sync_strength = float(cfg["osc"].get("sync_strength", 1.0))
+
         # H'': per-agent oscillator frequencies omega0_k ~ N(omega0, omega0_sigma^2)
         self.omega0_k = self.rng.normal(loc=self.omega0, scale=self.omega0_sigma, size=self.N)
-        # defensive: avoid negative frequencies (rare, but possible if sigma is large)
+        # defensive: avoid negative frequencies (if sigma is large)
         self.omega0_k = np.clip(self.omega0_k, 0.0, None)
 
         # cognition params
@@ -121,6 +124,11 @@ class World:
         self.cluster_sizes = np.ones(self.N, dtype=float)
         self.local_coh = np.zeros(self.N, dtype=float)
 
+        # H2: per-step event counters for logging
+        self.last_n_joined = 0
+        self.last_n_detached = 0
+        self.last_n_merges = 0
+
         # prepare logs
         self._agents_csv = self.out_dir / "agents.csv"
         self._global_csv = self.out_dir / "global.csv"
@@ -144,6 +152,23 @@ class World:
         z = np.exp(2j * np.pi * phases)
         return float(np.abs(np.mean(z)))
 
+    def _blend_phase(self, phase: float, target: float, strength: float) -> float:
+        """Circular blend of phases on S^1 via complex interpolation."""
+        strength = float(np.clip(strength, 0.0, 1.0))
+        phase = float(phase % 1.0)
+        target = float(target % 1.0)
+
+        if strength <= 0.0:
+            return phase
+        if strength >= 1.0:
+            return target
+
+        z = (1.0 - strength) * np.exp(2j * np.pi * phase) + strength * np.exp(2j * np.pi * target)
+        if float(np.abs(z)) < 1e-12:
+            return phase
+        ang = float(np.angle(z) / (2.0 * np.pi))
+        return float(ang % 1.0)
+
     def step(self) -> None:
         # --- 1) oscillator update + firing events
         fired = np.zeros(self.N, dtype=float)
@@ -155,7 +180,7 @@ class World:
             if new_phase >= 1.0:
                 fired[k] = 1.0
 
-            # wrap phase to [0,1)
+            # wrap to [0,1)
             a.phase = float(new_phase % 1.0)
 
         # --- 2) pre-join components (to detect merges)
@@ -183,6 +208,10 @@ class World:
             rng=self.rng,
         )
 
+        # H2: store per-step join/detach counts
+        self.last_n_joined = int(len(joined))
+        self.last_n_detached = int(len(detached))
+
         # --- 4) new components + cluster ids
         uf_new = UnionFind(self.N)
         for (i, j), _e in self.edges.items():
@@ -192,16 +221,22 @@ class World:
         for k in range(self.N):
             self.cluster_id[k] = root_to_cid[roots[k]]
 
-        # --- 5) phase sync on merges
+        # --- 5) phase sync on merges (soft sync)
+        self.last_n_merges = 0
         if self.sync_mode == "anchor":
             for e in joined:
                 if uf_old.find(e.i) != uf_old.find(e.j):
+                    self.last_n_merges += 1
                     new_root = uf_new.find(e.i)
                     nodes = comps[new_root]
                     anchor = e.j
                     anchor_phase = self.agents[anchor].phase
                     for n in nodes:
-                        self.agents[n].phase = anchor_phase
+                        self.agents[n].phase = self._blend_phase(
+                            phase=self.agents[n].phase,
+                            target=anchor_phase,
+                            strength=self.sync_strength,
+                        )
 
         # --- 6) cluster sizes per agent
         cluster_sizes = np.zeros(self.N, dtype=float)
@@ -355,6 +390,8 @@ class World:
             "t", "mean_speed", "coherence",
             "n_clusters", "mean_cluster_size", "n_edges",
             "mean_novelty", "mean_boreness", "mean_load",
+            "n_joined", "n_detached", "n_merges",
+            "mean_omega0", "std_omega0",
         ])
 
     def _log(self) -> None:
@@ -381,6 +418,9 @@ class World:
         mean_bor = float(np.mean(self.boreness))
         mean_load = float(np.mean(self.load))
 
+        mean_om = float(np.mean(self.omega0_k))
+        std_om = float(np.std(self.omega0_k))
+
         self._global_writer.writerow([
             self.t,
             float(np.mean(speeds)),
@@ -391,6 +431,11 @@ class World:
             mean_nov,
             mean_bor,
             mean_load,
+            int(self.last_n_joined),
+            int(self.last_n_detached),
+            int(self.last_n_merges),
+            mean_om,
+            std_om,
         ])
 
     def _close_logs(self) -> None:

@@ -1,0 +1,139 @@
+% docs/minipapers/H2_seed0.tex
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\title{ECFI Mini Report (H2 / H\textquotesingle): Intrinsic-Frequency Heterogeneity and Assembly--Coherence Event Tracing}
+\author{Internal engineering note (repo: \texttt{ecfi})}
+\date{\today}
+
+% Put the figures here:
+% docs/figures/H2_seed0/H2_plot_clusters_seed0.png, etc.
+\graphicspath{{../figures/H2_seed0/}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This mini report documents Step H2 (also referred to as H\textquotesingle) in the \texttt{ecfi} simulator. The step introduces agent-specific intrinsic oscillator frequencies $\omega_{0,k}$ and adds event-level instrumentation for join/detach/merge operations in the assembly layer. The goal is to avoid the trivial absorbing regime observed in the homogeneous-oscillator setup (rapid global phase lock-in and collapse to a single persistent mega-cluster), and instead obtain a metastable regime where high coherence coexists with ongoing assembly reconfiguration.
+\end{abstract}
+
+\section{Setup}
+We run the simulator with $N=50$ agents on a torus domain, with assembly rules (join/detach) based on proximity and local constraints. Oscillators evolve on phases $\theta_k \in [0,1)$ (normalized), and a merge-triggered synchronization rule is enabled (\texttt{sync\_mode=anchor}).
+
+\subsection{Key configuration}
+The run reported here uses:
+\begin{itemize}
+\item \textbf{Simulation:} $\Delta t=0.05$, $T=3000$ steps, seed $=0$.
+\item \textbf{Oscillators:} $\omega_0 = 0.15$, \textbf{$\omega_{0,\sigma}=0.01$}, phase noise $\sigma_{\theta}=0.00$.
+\item \textbf{Assembly:} $R_c=0.65$, $R_p=1.4$, max degree $=4$, $T_{\min}=20$, detach base prob $=0.008$.
+\end{itemize}
+
+\section{Step H2: Implementation changes}
+\subsection{Intrinsic-frequency heterogeneity}
+Instead of a shared $\omega_0$, each agent draws an intrinsic frequency
+\[
+\omega_{0,k} \sim \mathcal{N}(\omega_0,\omega_{0,\sigma}),
+\]
+and the phase update uses $\omega_{0,k}$ (with optional noise) and wraps modulo~$1$.
+
+\subsection{Event instrumentation}
+We log per-step counts:
+\[
+n_{\text{joined}}(t), \quad n_{\text{detached}}(t), \quad n_{\text{merges}}(t),
+\]
+and produce ``merge-marker'' overlays (vertical lines) to visually relate merge activity to:
+(i) assembly regime indicators and (ii) global phase coherence.
+
+\section{Results (seed 0)}
+This section comments directly on the generated figures.
+
+\subsection{Assembly regime indicators}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_clusters_seed0.png}}
+\caption{Assembly regime indicators: number of connected components (\texttt{n\_clusters}) and mean component size (\texttt{mean\_cluster\_size}).}
+\label{fig:clusters}
+\end{figure}
+
+Figure~\ref{fig:clusters} shows a rapid initial reduction of clusters (from near-isolated agents) followed by sustained fluctuations: the system does \emph{not} converge to a single persistent mega-cluster. Instead, it remains in a metastable regime with ongoing fragmentation and re-aggregation. This behavior contrasts with the homogeneous-oscillator case, where a single absorbing component often forms and persists once global coherence saturates.
+
+\subsection{Global phase coherence}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_coherence_seed0.png}}
+\caption{Global phase coherence $R(t)=\left|\frac{1}{N}\sum_{k=1}^N e^{2\pi i \theta_k(t)}\right|$.}
+\label{fig:coherence}
+\end{figure}
+
+Figure~\ref{fig:coherence} indicates a fast rise to a high-coherence regime ($R(t)\approx 1$), followed by persistent deviations (dips and recoveries). A natural reading is that merge-triggered anchoring temporarily aligns phases, while intrinsic-frequency mismatch $\omega_{0,k}$ reintroduces drift, preventing a permanent phase-locked absorbing state.
+
+\subsection{Merge markers: linking events to regimes}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_events_assembly_seed0.png}}
+\caption{Assembly indicators with merge markers (vertical lines).}
+\label{fig:events_assembly}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_events_coherence_seed0.png}}
+\caption{Global coherence with merge markers (vertical lines).}
+\label{fig:events_coherence}
+\end{figure}
+
+Figures~\ref{fig:events_assembly}--\ref{fig:events_coherence} suggest that merge activity is dense throughout the run and frequently coincides with perturbations of both assembly indicators and coherence. This provides a compact diagnostic layer: rather than treating coherence dips or cluster-size fluctuations as purely ``continuous'' noise, we can track them against discrete assembly events.
+
+\subsection{Event counts}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_events_counts_seed0.png}}
+\caption{Per-step join/detach/merge counts.}
+\label{fig:event_counts}
+\end{figure}
+
+Figure~\ref{fig:event_counts} shows an initial burst of merges as the system transitions from isolated agents to a structured assembly. After burn-in, event counts remain mostly low but nonzero, supporting the picture of continual micro-reconfiguration. Importantly, this ongoing event activity coexists with high coherence, suggesting that ``near synchrony'' does not imply ``structural freezing'' at the assembly layer.
+
+\subsection{Intrinsic signals}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_intrinsic_seed0.png}}
+\caption{Intrinsic signals: mean novelty, mean boreness, and mean load.}
+\label{fig:intrinsic}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{\detokenize{H2_plot_events_intrinsic_seed0.png}}
+\caption{Intrinsic signals with merge markers (vertical lines).}
+\label{fig:events_intrinsic}
+\end{figure}
+
+Figures~\ref{fig:intrinsic}--\ref{fig:events_intrinsic} indicate that novelty remains spiky and sustained, boreness stays close to zero, and load evolves on slower timescales with moderate variability. A working hypothesis is that $\omega_{0,k}$ heterogeneity produces continuous small mismatches that are repeatedly ``resolved'' by local assembly events and anchoring episodes, maintaining a steady stream of novelty without letting boreness accumulate.
+
+\section{Discussion and next step (H3 / H\textquotesprime\textquotesprime)}
+Step H2 successfully avoids the purely absorbing regime while retaining a high-coherence attractor-like behavior. However, synchronization is still driven by a \emph{hard} merge-triggered anchor rule. Two natural next refinements are:
+
+\subsection*{A) Soft anchoring on merges}
+Replace the hard reset $\theta_n \leftarrow \theta_{\text{anchor}}$ by a partial relaxation:
+\[
+\theta_n \leftarrow (1-\rho)\,\theta_n + \rho\,\theta_{\text{anchor}} \quad (\mathrm{mod}\ 1),
+\]
+with $\rho\in(0,1)$, possibly dependent on cluster size, novelty, or objective weights.
+
+\subsection*{B) Kuramoto-style coupling}
+Add a continuous coupling term:
+\[
+\dot{\theta}_k = \omega_{0,k} + K\cdot\frac{1}{|\mathcal{N}(k)|}\sum_{j\in\mathcal{N}(k)} \sin\!\big(2\pi(\theta_j-\theta_k)\big),
+\]
+where $K$ could be modulated by cognitive/objective state (e.g., $K\propto w_C$ or $K\propto (1-\text{novelty})$). This would shift synchronization from event-triggered resets to a state-dependent dynamical mechanism.
+
+\paragraph{Planned evaluation.}
+For H3 we will run a small seed sweep (e.g., $0\ldots9$) and summarize: mean coherence, mean number of clusters, merge frequency, and stability of intrinsic signals, to verify robustness and identify parameter regimes with distinct assembly--coherence coupling profiles.
+
+\end{document}
