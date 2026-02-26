@@ -1,0 +1,62 @@
+seed: 0
+
+sim:
+  dt: 0.05
+  steps: 3000
+
+env:
+  domain: torus
+  size: [10.0, 10.0]
+
+agents:
+  N: 50
+  vmax: 1.2
+  noise_sigma: 0.10
+
+neighbors:
+  Rp: 1.4
+
+assembly:
+  Rc: 0.65
+  max_degree: 4
+  Tmin: 20
+  detach_base_p: 0.008
+
+osc:
+  omega0: 0.15
+  phase_noise_sigma: 0.00
+  sync_mode: anchor
+
+# CFI-like intention dynamics (on 3D feature vector)
+cognition:
+  tau_c: 1.0
+  g: 0.6
+  alpha: 0.9
+  beta_I: 0.8
+  beta_C: -0.5
+  beta_N: 0.0
+
+objective:
+  init_weights: [0.60, 0.15, 0.25]   # (wI, wC, wN)
+  update_rate: 0.25                  # faster shift toward independence
+  relax_rate: 0.005                  # slow relaxation back to init
+
+constraints:
+  features_ema: 0.12
+  lambda: 0.20
+  eta: 0.05
+  b_max: 0.03
+  c_max: 4.3
+  event_ema: 0.25
+  gamma: [0.40, 0.55, 0.25, 0.60]     # neigh, degree, event_rate, novelty
+
+policy:
+  k_align: 0.55
+  k_cohesion: 0.45
+  k_sep: 1.40
+  R_sep: 0.40
+  damp: 0.06
+
+logging:
+  out_dir: outputs/run
+  every: 1
