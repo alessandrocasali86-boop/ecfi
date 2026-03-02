@@ -1,0 +1,197 @@
+% docs/ecfi_minipaper_trace.tex
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+% ---- Notation helpers (avoid N vs \mathcal{N} collision) ----
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Neigh}{\mathcal{N}} % neighbor set
+\newcommand{\nov}{\nu}          % novelty
+\newcommand{\varph}{\varphi}    % prefer \varphi
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+
+\title{Tracing a Minimal E-CFI Demo: From Architecture to Prototype, Diagnostics, and Step H$'$ Tuning}
+\author{Internal mini-paper (repo trace)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note documents, in a traceable way, the first runnable prototype of an Embodied Collective Free Improvisation (E-CFI)
+swarm demo and the first diagnostic cycle obtained from simulation logs.
+The prototype instantiates: (i) an embodied self-assembly substrate (join/detach and component tracking), (ii) event-driven oscillators
+with merge-triggered phase synchronization, and (iii) a two-time-scale cognitive layer inspired by the collective free improvisation (CFI)
+template (fast intention, slow objective), coupled to intrinsic signals (novelty, boreness, and load proxies).
+We report a characteristic failure mode of the initial parameterization---rapid collapse into a single assembly component and permanent
+phase lock-in---and we propose a minimal Step H$'$ tuning (plus an optional soft-sync rule) aimed at producing observable plateaus and
+reconfiguration phases, as required by the vision paper.
+\end{abstract}
+
+\section{Prototype scope and implementation snapshot}
+\subsection{What is implemented (Step G/H)}
+The current prototype implements the following modules:
+
+\begin{enumerate}[leftmargin=2.2em]
+\item \textbf{Embodiment (assembly graph).} Agents move in a 2D torus. An \emph{assembly graph} $G_A(t)$ is formed by slot-limited contact joins
+within radius $R_C$ and broken by probabilistic detachments after a minimum dwell time $T_{\min}$.
+Connected components of $G_A(t)$ define \emph{assemblies} (clusters), whose sizes and counts are logged.
+\item \textbf{Oscillators.} Each agent carries a phase $\varph_k(t)\in[0,1)$ with free-running drift $\dot{\varph}=\omega_0$ and optional noise.
+When a join merges two previously disconnected components, phases are synchronized within the merged component (initially via \emph{hard sync}).
+\item \textbf{CFI-inspired cognition.} Each agent computes a 3D local feature vector
+$x_k(t)=(\deg_k(t),\ \text{cluster\_size}_k(t),\ \text{local\_coherence}_k(t))$.
+A fast intention state $\omega_k(t)\in\R^3$ is updated by a saturated dynamical rule
+\[
+\frac{d\omega_k}{dt}=\alpha x_k(t) + \beta_k(t)\sum_{\ell\in\Neigh_k(t)}x_\ell(t) - g\norm{\omega_k(t)}^2\omega_k(t),
+\]
+while the slow objective is encoded by mixture weights $\Omega_k(t)=(w^I_k,w^C_k,w^N_k)$ controlling imitation/contrast/independence.
+\item \textbf{Intrinsic constraints.} Novelty $\nov_k(t)$ is defined as the distance between successive EMAs of $x_k(t)$;
+boreness $b_k(t)$ is a leaky integrator of novelty deficits, and load $c_k(t)$ is a proxy combining neighborhood size, assembly degree,
+event rate, and novelty.
+When $b_k>b_{\max}$ or $c_k>c_{\max}$, objective weights shift toward independence.
+\item \textbf{Policy.} Motion uses a steering law combining alignment, cohesion, and separation, modulated by $\Omega_k$ and $\norm{\omega_k}$.
+\end{enumerate}
+
+\subsection{Reproducibility contract (how to rerun)}
+A run is determined by a YAML config and a seed. The runner writes:
+\texttt{outputs/run/config\_resolved.json}, \texttt{global.csv}, \texttt{agents.csv}, and diagnostic plots.
+In the repository, the basic workflow is:
+
+\begin{itemize}[leftmargin=2.2em]
+\item run: \texttt{python -m ecfi.run --config configs/base.yaml --seed 0}
+\item plot: \texttt{python -m ecfi.viz.plot\_run --run\_dir outputs/run}
+\end{itemize}
+
+\section{Observed behavior from the first diagnostic cycle}
+Figures~\ref{fig:clusters}--\ref{fig:intrinsic} report the three core diagnostic plots obtained from the initial parameterization
+(\texttt{configs/base.yaml}) with $N=50$ agents and $3000$ steps.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/plot_clusters.png}
+  \caption{\textbf{Assembly regime indicators.}
+  The number of connected components $n_{\text{clusters}}(t)$ drops quickly and stabilizes at $1$,
+  while the mean cluster size grows to $50$ and remains there. This indicates a rapid transition to a single
+  connected assembly with no subsequent fragmentation.}
+  \label{fig:clusters}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/plot_coherence.png}
+  \caption{\textbf{Global phase coherence.}
+  The order parameter saturates to $1$ and remains locked, i.e., complete global synchronization.
+  Given the merge-triggered phase synchronization rule, this is consistent with the emergence of a single
+  connected assembly coupled to a strong (hard) synchronization mechanism.}
+  \label{fig:coherence}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.92\linewidth]{figures/plot_intrinsic.png}
+  \caption{\textbf{Intrinsic signals (mean novelty, boreness, load).}
+  Load remains in a relatively high band (driven by neighborhood and assembly degrees), while mean novelty exhibits
+  short transients early on. Boreness appears nearly flat at the plotted scale, which matches the intended update rule:
+  when novelty is near zero, boreness tends to a small value on the order of $\eta$ (hence it may not exceed $b_{\max}$
+  for the initial thresholds).}
+  \label{fig:intrinsic}
+\end{figure}
+
+\section{Diagnosis: why the initial parameterization locks in}
+The diagnostic plots support the following causal reading.
+
+\begin{enumerate}[leftmargin=2.2em]
+\item \textbf{Assembly becomes globally connected.}
+The join rule and steering policy produce a connectivity cascade, after which $G_A(t)$ has a single connected component.
+\item \textbf{Hard phase synchronization creates an absorbing state.}
+When a join merges components, the prototype uses hard sync:
+$\varph_j \leftarrow \varph_{\text{anchor}}$ for all $j$ in the merged component.
+Once connectivity reaches one component, repeated merges (or early merges) quickly drive the entire population to a shared phase,
+after which global coherence remains at $1$.
+\item \textbf{Boreness thresholds are not triggered.}
+With the current definition
+$b_k(t)=(1-\lambda)b_k(t-\Delta)+\lambda\max(0,\eta-\nov_k(t))$,
+if $\nov_k(t)\approx 0$, then $b_k(t)$ tends to $\eta$ (not to an unbounded growth).
+Thus, if $b_{\max}\gg \eta$, the objective update toward independence never activates.
+\end{enumerate}
+
+In short: the current configuration generates a strong, quickly absorbing regime (single assembly + full phase lock-in),
+which prevents the demo from exhibiting alternating plateaus and reconfiguration phases.
+
+\section{Step H$'$ tuning: minimal modifications to induce regime switching}
+We propose a minimal Step H$'$ tuning that targets the three points above, without changing the architecture.
+
+\subsection{Parameter-level tuning (config only)}
+The following changes are sufficient to (i) increase fragmentation propensity, (ii) make boreness-triggered objective shifts operative,
+and (iii) reduce unconditional cohesion.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Block} & \textbf{Baseline (H)} & \textbf{Tuned (H$'$)} \\
+\midrule
+assembly & $T_{\min}=40$, $p_{\text{detach}}=0.001$ & $T_{\min}=20$, $p_{\text{detach}}=0.008$ \\
+constraints & $\eta=0.02$, $b_{\max}=1.0$, $c_{\max}=6.0$ & $\eta=0.05$, $b_{\max}=0.03$, $c_{\max}=4.3$ \\
+objective & init $(0.70,0.20,0.10)$ & init $(0.60,0.15,0.25)$; faster update \\
+policy & stronger cohesion & reduced cohesion; stronger separation \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Operationally, H$'$ should yield:
+(i) clusters that form but are more likely to detach,
+(ii) intrinsic triggers that shift weights toward independence,
+(iii) oscillatory behavior in $n_{\text{clusters}}(t)$ and nontrivial coherence trajectories.
+
+\subsection{Optional rule-level tuning: soft sync instead of hard sync}
+If global coherence remains stuck at $1$ even after parameter tuning, we replace hard sync with a \emph{soft} synchronization step,
+applied only on merge events:
+\[
+\varph_n \leftarrow (1-\rho)\varph_n + \rho\,\varph_{\text{anchor}} \pmod{1},
+\qquad \rho\in(0,1).
+\]
+This preserves the embodied-merge semantics (a merge tends to synchronize) while avoiding an immediate absorbing lock-in.
+
+\section{Traceability within the repository}
+To keep a clean trace of this development cycle, we recommend:
+
+\begin{enumerate}[leftmargin=2.2em]
+\item Keep baseline configs and tuned configs separately:
+\texttt{configs/base.yaml} (H) vs.\ \texttt{configs/regime\_switch.yaml} (H$'$).
+\item Store figures in \texttt{docs/figures/} and include them in this note.
+\item Record the git commit hash of each milestone in a short \texttt{docs/TRACE.md} file (G, H, H$'$),
+and include the command outputs or the resolved configs saved under \texttt{outputs/}.
+\end{enumerate}
+
+\section{References}
+\begin{thebibliography}{10}
+
+\bibitem{canonne_garnier_mcm2011}
+Cl{\'e}ment Canonne and Nicolas Garnier.
+\newblock A Model for Collective Free Improvisation.
+\newblock In \emph{Mathematics and Computation in Music (MCM), Third International Conference},
+  \emph{Lecture Notes in Computer Science}, vol.~6726, pp.~29--41. Springer, 2011.
+\newblock DOI: \href{https://doi.org/10.1007/978-3-642-21590-2_3}{10.1007/978-3-642-21590-2\_3}.
+
+\bibitem{lucas_acsos2024_embodied}
+Pedro Lucas, Alexander Szorkovszky, Stefano Fasciani, and Kyrre Glette.
+\newblock Self-Assembly and Synchronization: Crafting Music with Multi-Agent Embodied Oscillators.
+\newblock In \emph{Proceedings of the IEEE International Conference on Autonomic Computing and Self-Organizing Systems (ACSOS)},
+  pp.~145--150. IEEE, 2024.
+\newblock DOI: \href{https://doi.org/10.1109/ACSOS61780.2024.00034}{10.1109/ACSOS61780.2024.00034}.
+
+\end{thebibliography}
+
+\end{document}
