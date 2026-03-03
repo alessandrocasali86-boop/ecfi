@@ -8,6 +8,16 @@ The format is based on "Keep a Changelog", and this project uses Semantic Versio
 ### Changed
 ### Fixed
 
+## [0.1.2] - 2026-03-03
+### Added
+- H1 (regime-switch) baseline artifacts: resolved config, global log, and core diagnostic plots (seed=0) under docs/runs/ and docs/figures/.
+
+### Changed
+- (none)
+
+### Fixed
+- (none)
+
 ## [0.1.1] - 2026-03-03
 ### Added
 - First runnable E-CFI prototype (sim+assembly+cognition+signals) with base config.
