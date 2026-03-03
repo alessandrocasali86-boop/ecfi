@@ -8,6 +8,14 @@ The format is based on "Keep a Changelog", and this project uses Semantic Versio
 ### Changed
 ### Fixed
 
+## [0.1.4] - 2026-03-03
+### Added
+- Faithful Lucas-like division rule: new --division_mode faithful generates c:b intra-cycle subdivisions (multi-events per cycle) from phase wraps.
+- A/B comparison supported via --out_mid / --out_xml for thin vs faithful renders.
+
+### Changed
+- Sonification CLI extended: --division_mode {thin,faithful}.
+
 ## [0.1.3] - 2026-03-03
 ### Added
 - Sonification MVP: music21-based renderer to export MIDI and MusicXML from agents.csv phase-wrap events (ecfi/sonify/render_m21.py).
