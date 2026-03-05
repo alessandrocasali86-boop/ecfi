@@ -1,0 +1,7 @@
+pytest
+ruff
+black
+mypy
+ipykernel
+jupyter
+matplotlib
