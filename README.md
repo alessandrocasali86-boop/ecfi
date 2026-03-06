@@ -1,18 +1,10 @@
 # ecfi
 
-Embodied Collective Free Improvisation (E-CFI) demo simulation.
+Embodied Collective Free Improvisation (E-CFI): minimal demo simulation + a small Audio-TDA pipeline.
 
-## Quick start (planned)
-- `python -m ecfi.run --config configs/base.yaml --seed 0`
+## Quick start
 
-## Repo layout
-- `ecfi/` Python package
-- `configs/` YAML configs
-- `outputs/` generated runs (not versioned, except `.gitkeep`)
-- `docs/` notes (e.g., architecture)
-
-## Setup
-
+### 1) Create the environment
 ```bash
 python -m venv .venv
 source .venv/bin/activate
