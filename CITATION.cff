@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "ecfi: Embodied Collective Free Improvisation (E-CFI) demo simulation"
+type: software
+authors:
+  - family-names: Casali
+    given-names: Alessandro
+repository-code: "https://github.com/alessandrocasali86-boop/ecfi"
+url: "https://github.com/alessandrocasali86-boop/ecfi"
+keywords:
+  - embodied collective free improvisation
+  - multi-agent simulation
+  - sonification
+  - topological data analysis
+  - persistent homology
+  - vietoris-rips
+version: "v0.1.5"
+date-released: "2026-03-06"
+preferred-citation:
+  type: software
+  authors:
+    - family-names: Casali
+      given-names: Alessandro
+  title: "ecfi: Embodied Collective Free Improvisation (E-CFI) demo simulation"
+  version: "v0.1.5"
+  date-released: "2026-03-06"
+  url: "https://github.com/alessandrocasali86-boop/ecfi"
