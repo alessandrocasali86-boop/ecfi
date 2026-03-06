@@ -47,6 +47,8 @@ audio_tda_out*/
 !audio_tda_out_nowarn/
 !audio_tda_out_nowarn/*.png
 !audio_tda_out_nowarn/*.csv
+!audio_tda_out_nowarn/config.json
+!audio_tda_out_nowarn/run_config.json
 
 # --- Other runtime outputs ---
 outputs/
