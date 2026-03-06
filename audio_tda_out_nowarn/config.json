@@ -1,0 +1,21 @@
+{
+  "audio_dir": "audio",
+  "files": {
+    "base": "audio/sonification_base.wav",
+    "thin": "audio/sonification_thin.wav",
+    "faithful": "audio/sonification_faithful.wav"
+  },
+  "sr": 22050,
+  "n_mels": 40,
+  "n_fft": 2048,
+  "hop_length": 512,
+  "fmin": 30.0,
+  "fmax": null,
+  "top_db": 80.0,
+  "max_frames": 400,
+  "frame_mode": "uniform",
+  "pca_dim": 8,
+  "clip": 8.0,
+  "maxdim": 2,
+  "thresh": null
+}

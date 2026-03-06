@@ -1,0 +1,10 @@
+homology_dim,a,b,wasserstein,p,max_frames,pca_dim,frame_sampling,thresh_mode,thresh_quantile,thresh_used
+0,sonification_base,sonification_faithful,44.95096446573734,1,400,8,uniform,global,0.9,12.090936660766602
+0,sonification_base,sonification_thin,23.164196461439133,1,400,8,uniform,global,0.9,12.090936660766602
+0,sonification_faithful,sonification_thin,26.301365301012993,1,400,8,uniform,global,0.9,12.090936660766602
+1,sonification_base,sonification_faithful,20.02880590539089,1,400,8,uniform,global,0.9,12.090936660766602
+1,sonification_base,sonification_thin,20.515608312474626,1,400,8,uniform,global,0.9,12.090936660766602
+1,sonification_faithful,sonification_thin,22.464496885112503,1,400,8,uniform,global,0.9,12.090936660766602
+2,sonification_base,sonification_faithful,7.76479399982931,1,400,8,uniform,global,0.9,12.090936660766602
+2,sonification_base,sonification_thin,7.413301077530594,1,400,8,uniform,global,0.9,12.090936660766602
+2,sonification_faithful,sonification_thin,7.742692903484003,1,400,8,uniform,global,0.9,12.090936660766602

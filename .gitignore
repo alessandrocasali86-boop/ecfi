@@ -25,3 +25,28 @@ outputs/*
 
 # Logs
 *.log
+
+# --- Python / env ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.dist-info/
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+
+# --- Audio artifacts (keep out of git) ---
+audio/
+*.wav
+*.mp3
+
+# --- Audio TDA outputs: ignore all, keep only the curated "nowarn" set ---
+audio_tda_out*/
+!audio_tda_out_nowarn/
+!audio_tda_out_nowarn/*.png
+!audio_tda_out_nowarn/*.csv
+
+# --- Other runtime outputs ---
+outputs/

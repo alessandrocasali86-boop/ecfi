@@ -52,3 +52,35 @@ Keep entries short, dated, and reproducible (config, seed, command, outputs).
 - Key results:
 - Files changed:
 - Next:
+
+## Audio TDA (VR on log-mel frames) — run stable (no RuntimeWarning)
+
+Command:
+python scripts/tda_audio_vr.py \
+  --audio_dir audio \
+  --out_dir audio_tda_out_nowarn \
+  --n_mels 40 \
+  --max_frames 400 \
+  --pca_dim 8 \
+  --maxdim 2 \
+  --wasserstein_p 1 \
+  --frame_sampling uniform \
+  --plot_mode both
+
+Results (Wasserstein, p=1):
+H0:
+  base vs faithful = 44.9510
+  base vs thin     = 23.1642
+  faithful vs thin = 26.3014
+H1:
+  base vs faithful = 20.0288
+  base vs thin     = 20.5156
+  faithful vs thin = 22.4645
+H2:
+  base vs faithful =  7.7648
+  base vs thin     =  7.4133
+  faithful vs thin =  7.7427
+
+Outputs:
+- audio_tda_out_nowarn/*_vr_diagrams.png
+- audio_tda_out_nowarn/wasserstein_distances.csv

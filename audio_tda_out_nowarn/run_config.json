@@ -1,0 +1,27 @@
+{
+  "config": {
+    "audio_dir": "audio",
+    "out_dir": "audio_tda_out_nowarn",
+    "sr": 22050,
+    "duration": null,
+    "n_mels": 40,
+    "n_fft": 2048,
+    "hop_length": 512,
+    "max_frames": 400,
+    "frame_sampling": "uniform",
+    "seed": 0,
+    "pca_dim": 8,
+    "maxdim": 2,
+    "thresh": -1.0,
+    "thresh_mode": "global",
+    "thresh_quantile": 0.9,
+    "wasserstein_p": 1,
+    "plot_mode": "both",
+    "prefer_ext": "wav"
+  },
+  "versions": {
+    "python": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+    "numpy": "2.0.2",
+    "librosa": "0.11.0"
+  }
+}
