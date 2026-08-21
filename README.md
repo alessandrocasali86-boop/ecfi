@@ -314,10 +314,12 @@ published numbers verifiable.
 
 ## 9. Data deposit
 
-The three lossless WAV files are too large for version control. They are to be
-deposited on Zenodo as a separate dataset; the DOI will be added here upon
-release. Each is 44.1 kHz stereo 32-bit float, rendered as described in §6 — note
-that the Audio-TDA pipeline resamples them to 22 050 Hz on load.
+The three lossless WAV files are too large for version control. They are
+deposited on Zenodo as a separate dataset:
+[doi:10.5281/zenodo.22041198](https://doi.org/10.5281/zenodo.22041198).
+Each is 44.1 kHz stereo 32-bit float, rendered as described in §6 — note that the
+Audio-TDA pipeline resamples them to 22 050 Hz on load. Download them into
+`audio/` to re-run the pipeline.
 
 The MP3 renderings of the same three files are tracked in `audio/`.
 
@@ -340,9 +342,15 @@ availability. The difference between the two repositories is deliberate.
 Citation metadata is in [`CITATION.cff`](CITATION.cff); GitHub renders it as a
 ready-made BibTeX entry via *Cite this repository*.
 
-Once the release is archived, please cite the Zenodo DOI rather than the bare
-GitHub URL — DOIs are permanent and versioned. The DOI will be added here and to
-`CITATION.cff` upon release.
+Please cite the archived Zenodo DOIs rather than the bare GitHub URL — DOIs are
+permanent and versioned:
+
+- **Code** (this repository, v0.2.0):
+  [doi:10.5281/zenodo.22041071](https://doi.org/10.5281/zenodo.22041071) —
+  concept DOI for all versions:
+  [doi:10.5281/zenodo.22041070](https://doi.org/10.5281/zenodo.22041070)
+- **Audio dataset** (lossless WAV):
+  [doi:10.5281/zenodo.22041198](https://doi.org/10.5281/zenodo.22041198)
 
 The paper describing the model will be added here once published:
 

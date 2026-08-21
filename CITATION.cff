@@ -7,6 +7,7 @@ authors:
     given-names: Alessandro
 repository-code: "https://github.com/alessandrocasali86-boop/ecfi"
 url: "https://github.com/alessandrocasali86-boop/ecfi"
+doi: 10.5281/zenodo.22041071
 license: MIT
 keywords:
   - embodied collective free improvisation
@@ -25,4 +26,5 @@ preferred-citation:
   title: "ecfi: Embodied Collective Free Improvisation (E-CFI) demo simulation"
   version: "0.2.0"
   date-released: "2026-08-21"
+  doi: 10.5281/zenodo.22041071
   url: "https://github.com/alessandrocasali86-boop/ecfi"
