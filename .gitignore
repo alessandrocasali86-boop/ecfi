@@ -1,48 +1,38 @@
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.egg-info/
+*.dist-info/
 
-# Environments
+# --- Environments ---
 .venv/
 venv/
 .env/
 
-# Build / packaging
+# --- Build / packaging ---
 build/
 dist/
-*.egg-info/
-
-# OS / editor
-.DS_Store
-.vscode/
-.idea/
-
-# Outputs (keep folder via outputs/.gitkeep)
-outputs/*
-!outputs/.gitkeep
-
-# Logs
-*.log
-
-# --- Python / env ---
-.venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-*.dist-info/
 
 # --- OS / editor ---
 .DS_Store
 .vscode/
+.idea/
 
-# --- Audio artifacts (keep out of git) ---
-audio/
+# --- Logs ---
+*.log
+
+# --- Run outputs (keep the directory itself via outputs/.gitkeep) ---
+outputs/*
+!outputs/.gitkeep
+
+# --- Audio ---
+# MP3 renderings are tracked so the repository is audible out of the box.
+# Lossless WAV masters stay out of git and are deposited on Zenodo (README §9).
 *.wav
-*.mp3
 
-# --- Audio TDA outputs: ignore all, keep only the curated "nowarn" set ---
+# --- Audio-TDA outputs: ignore every run directory except the curated one ---
 audio_tda_out*/
 !audio_tda_out_nowarn/
 !audio_tda_out_nowarn/*.png
@@ -50,5 +40,9 @@ audio_tda_out*/
 !audio_tda_out_nowarn/config.json
 !audio_tda_out_nowarn/run_config.json
 
-# --- Other runtime outputs ---
-outputs/
+# --- Duplicated figure sets, deliberately untracked ---
+# docs/figures/audio_tda/ holds byte-identical copies of audio_tda_out_nowarn/*.png
+# docs/figures/sim/ is a later re-render of the frozen baseline figures already
+# tracked directly under docs/figures/. The tracked copies are canonical.
+docs/figures/audio_tda/
+docs/figures/sim/

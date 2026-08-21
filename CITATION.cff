@@ -7,6 +7,7 @@ authors:
     given-names: Alessandro
 repository-code: "https://github.com/alessandrocasali86-boop/ecfi"
 url: "https://github.com/alessandrocasali86-boop/ecfi"
+license: MIT
 keywords:
   - embodied collective free improvisation
   - multi-agent simulation
@@ -14,14 +15,14 @@ keywords:
   - topological data analysis
   - persistent homology
   - vietoris-rips
-version: "v0.1.5"
-date-released: "2026-03-06"
+version: "0.2.0"
+date-released: "2026-08-21"
 preferred-citation:
   type: software
   authors:
     - family-names: Casali
       given-names: Alessandro
   title: "ecfi: Embodied Collective Free Improvisation (E-CFI) demo simulation"
-  version: "v0.1.5"
-  date-released: "2026-03-06"
+  version: "0.2.0"
+  date-released: "2026-08-21"
   url: "https://github.com/alessandrocasali86-boop/ecfi"
